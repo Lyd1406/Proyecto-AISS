@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Canales - VideoMiner</title>
+</head>
+<body>
+    <h1>Canales</h1>
+    <table border="1">
+        <tr>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Creado</th>
+            <th></th>
+        </tr>
+        <tr th:each="channel : ${channels}">
+            <td th:text="${channel.name}">Nombre</td>
+            <td th:text="${channel.description}">Descripción</td>
+            <td th:text="${channel.createdTime}">Fecha</td>
+            <td>
+                <a th:href="@{/web/channels/{id}(id=${channel.id})}">Ver detalle</a>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

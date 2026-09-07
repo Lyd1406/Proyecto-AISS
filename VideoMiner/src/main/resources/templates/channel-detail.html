@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${channel.name}">Canal</title>
+</head>
+<body>
+    <a th:href="@{/web/channels}">&larr; Volver a canales</a>
+    <h1 th:text="${channel.name}">Nombre del canal</h1>
+    <p th:text="${channel.description}">Descripción</p>
+    <p><small th:text="${channel.createdTime}">Fecha</small></p>
+
+    <h2>Vídeos</h2>
+    <ul>
+        <li th:each="video : ${channel.videos}" th:text="${video.title}">Título del vídeo</li>
+    </ul>
+</body>
+</html>
