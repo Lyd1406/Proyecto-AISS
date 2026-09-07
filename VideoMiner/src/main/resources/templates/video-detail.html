@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${video.name}">Vídeo</title>
+</head>
+<body>
+    <a th:href="javascript:history.back()">&larr; Volver</a>
+    <h1 th:text="${video.name}">Nombre del vídeo</h1>
+    <p th:text="${video.description}">Descripción</p>
+    <p><small th:text="${video.releaseTime}">Fecha</small></p>
+
+    <h3 th:if="${video.user != null}">
+        Autor: <span th:text="${video.user.name}">Nombre usuario</span>
+    </h3>
+
+    <h2>Comentarios</h2>
+    <ul>
+        <li th:each="comment : ${video.comments}" th:text="${comment.text}">Comentario</li>
+    </ul>
+
+    <h2>Captions</h2>
+<ul>
+    <li th:each="caption : ${video.captions}">
+        <span th:text="${caption.language}">Idioma</span> —
+        <a th:href="${caption.link}" th:text="${caption.link}">enlace</a>
+    </li>
+</ul>
+</body>
+</html>
