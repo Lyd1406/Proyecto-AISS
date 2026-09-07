@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>VideoMiner - Cliente API</title>
+    <style>
+        body { font-family: sans-serif; margin: 2rem; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+        a { cursor: pointer; color: blue; text-decoration: underline; }
+        #back { display: none; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+
+<h1>VideoMiner - Cliente API (canal API)</h1>
+<a id="back" onclick="showChannels()">&larr; Volver a canales</a>
+
+<div id="channels-view">
+    <h2>Canales</h2>
+    <table>
+        <thead>
+            <tr><th>Nombre</th><th>Descripción</th><th>Creado</th><th></th></tr>
+        </thead>
+        <tbody id="channels-body"></tbody>
+    </table>
+</div>
+
+<div id="videos-view" style="display:none;">
+    <h2 id="videos-title"></h2>
+    <ul id="videos-list"></ul>
+</div>
+
+<div id="video-detail-view" style="display:none;">
+    <h2 id="video-name"></h2>
+    <p id="video-description"></p>
+    <p id="video-user"></p>
+    <h3>Comentarios</h3>
+    <ul id="video-comments"></ul>
+    <h3>Captions</h3>
+    <ul id="video-captions"></ul>
+</div>
+
+<script>
+    const API_BASE = "/videominer/v1";
+
+    async function loadChannels() {
+        const res = await fetch(`${API_BASE}/channels`);
+        const channels = await res.json();
+        const tbody = document.getElementById("channels-body");
+        tbody.innerHTML = "";
+        channels.forEach(ch => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${ch.name}</td>
+                <td>${ch.description ?? ""}</td>
+                <td>${ch.createdTime}</td>
+                <td><a onclick="loadVideos('${ch.id}', '${ch.name}')">Ver vídeos</a></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function loadVideos(channelId, channelName) {
+        const res = await fetch(`${API_BASE}/channels/${channelId}/videos`);
+        const videos = await res.json();
+
+        document.getElementById("videos-title").textContent = `Vídeos de ${channelName}`;
+        const list = document.getElementById("videos-list");
+        list.innerHTML = "";
+        videos.forEach(v => {
+            const li = document.createElement("li");
+            li.innerHTML = `<a onclick="loadVideoDetail('${v.id}')">${v.name}</a>`;
+            list.appendChild(li);
+        });
+
+        toggleView("videos-view");
+    }
+
+    async function loadVideoDetail(videoId) {
+        const res = await fetch(`${API_BASE}/videos/${videoId}`);
+        const video = await res.json();
+
+        document.getElementById("video-name").textContent = video.name;
+        document.getElementById("video-description").textContent = video.description ?? "";
+        document.getElementById("video-user").textContent = video.user ? `Autor: ${video.user.name}` : "";
+
+        const comments = document.getElementById("video-comments");
+        comments.innerHTML = "";
+        (video.comments || []).forEach(c => {
+            const li = document.createElement("li");
+            li.textContent = c.text;
+            comments.appendChild(li);
+        });
+
+        const captions = document.getElementById("video-captions");
+        captions.innerHTML = "";
+        (video.captions || []).forEach(cap => {
+            const li = document.createElement("li");
+            li.innerHTML = `${cap.language} — <a href="${cap.link}" target="_blank">${cap.link}</a>`;
+            captions.appendChild(li);
+        });
+
+        toggleView("video-detail-view");
+    }
+
+    function showChannels() {
+        toggleView("channels-view");
+    }
+
+    function toggleView(viewId) {
+        ["channels-view", "videos-view", "video-detail-view"].forEach(id => {
+            document.getElementById(id).style.display = (id === viewId) ? "block" : "none";
+        });
+        document.getElementById("back").style.display = (viewId === "channels-view") ? "none" : "block";
+    }
+
+    loadChannels();
+</script>
+
+</body>
+</html>
