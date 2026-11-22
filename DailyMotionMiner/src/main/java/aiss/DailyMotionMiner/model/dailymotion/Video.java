@@ -89,6 +89,7 @@ public class Video {
         return user;
     }
     @JsonProperty("user")
+    @JsonAlias("owner")
     public void setUser(String user) {
         this.user = user;
     }

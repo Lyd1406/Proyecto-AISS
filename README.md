@@ -14,6 +14,30 @@ https://github.com/carmenropue/Proyecto-AISS
 | PeerTubeMiner | 8081 |
 | DailyMotionMiner | 8082 |
 
+## Demo interactiva de VideoMiner
+
+La demo permite elegir un canal, consultar sus vídeos y abrir la ficha de uno de ellos. El inspector muestra la ruta GET, el estado HTTP y la respuesta JSON de cada paso.
+
+### Abrir el ejemplo sin instalar nada
+
+Abre [demo.html](VideoMiner/src/main/resources/static/demo.html) desde tu copia local con un navegador. El modo **Respuestas guardadas** reproduce las respuestas obtenidas al ejecutar VideoMiner con el canal `tv` de la colección de Postman. Pulsa **Ver vídeos** y abre el vídeo `21856` para ver el autor, un comentario y una pista de subtítulos. **Ver JSON completo** muestra los datos que alimentan la ficha.
+
+### Consultar la API en directo
+
+1. Con un JDK 17 o 21 instalado, ejecuta desde la raíz del repositorio:
+
+   ```sh
+   cd VideoMiner
+   sh mvnw spring-boot:run
+   ```
+
+   En Windows, usa `mvnw.cmd spring-boot:run` dentro de la carpeta `VideoMiner`.
+2. Abre la [demo en directo](http://localhost:8080/demo.html). También puedes acceder desde el [cliente API](http://localhost:8080/api-client.html). Para este recorrido basta con arrancar VideoMiner.
+3. Si la lista está vacía, importa [la colección de Postman](VideoMiner-postman.json) y ejecuta **Create Channel**. Envía el canal de ejemplo a `POST /videominer/v1/channels`. Tras recibir `201 Created`, recarga la demo. Con la configuración por defecto, H2 guarda los datos en memoria y tendrás que volver a cargarlos al reiniciar.
+4. Pulsa **Ver vídeos** en el canal `tv`. El inspector mostrará `GET /videominer/v1/channels/80/videos` y la lista de ocho vídeos. Al seleccionar el vídeo `21856`, verás la respuesta de `GET /videominer/v1/videos/21856`.
+
+Puedes alternar entre **Abrir el ejemplo guardado** y **Consultar la API en directo** desde la propia demo. Para detener el servicio, pulsa `Ctrl+C` en la terminal.
+
 ## Funcionalidades implementadas
 
 - Obtención de canales desde PeerTubeMiner
@@ -26,6 +50,45 @@ https://github.com/carmenropue/Proyecto-AISS
 - Soporte para comments
 - Soporte para captions
 - Generación automática de IDs en VideoMiner para DailyMotionMiner
+
+## Control de acceso a los subtítulos de Dailymotion
+
+DailyMotionMiner consulta los metadatos públicos de un vídeo mediante la API REST legacy de Dailymotion. Para la consulta de subtítulos, actúa como cliente de servidor con **OAuth 2.0 Client Credentials**. Dailymotion valida la clave al emitir el token y comprueba su acceso al recurso cuando recibe el encabezado `Authorization: Bearer …`. El token se conserva en memoria hasta poco antes de su vencimiento. Tras un `401` en subtítulos, la siguiente consulta solicita un token nuevo.
+
+| Paso | Petición que hace DailyMotionMiner |
+| --- | --- |
+| Metadatos públicos | `GET https://api.dailymotion.com/video/{id}`, sin token |
+| Obtener el token | `POST https://partner.api.dailymotion.com/oauth/v1/token`, con la clave privada y su secreto |
+| Consultar subtítulos | `GET https://partner.api.dailymotion.com/rest/video/{id}/subtitles`, con el token Bearer |
+
+La referencia de Dailymotion clasifica `id`, `language` y `url` como campos de lectura pública. La autenticación estudiada aquí corresponde al acceso de servidor mediante la API de partners, que es la ruta que utiliza el minero para esa consulta. [Client Credentials en la API legacy](https://developers.dailymotion.com/v0/docs/authenticate-using-client-credentials) · [Campos de subtítulos](https://developers.dailymotion.com/v0/reference/subtitles-fields).
+
+### Configuración y prueba en directo
+
+1. En Dailymotion Studio, crea una clave de API **privada** para los canales que vas a consultar y asígnale los permisos necesarios. Si la clave que se había guardado en el repositorio es real, revócala y usa una nueva. Git puede conservar los valores anteriores en su historial.
+2. Configura `DAILYMOTION_CLIENT_ID` y `DAILYMOTION_CLIENT_SECRET` como variables de entorno del proceso. Si tu clave necesita solicitar ámbitos concretos, configura también `DAILYMOTION_SCOPE` como una lista separada por espacios. En IntelliJ puedes definirlas en **Run → Edit Configurations → Environment variables**.
+3. Con JDK 21, ejecuta desde la raíz del proyecto:
+
+   ```sh
+   cd DailyMotionMiner
+   sh mvnw spring-boot:run
+   ```
+
+4. En Postman, haz un `GET` a `http://localhost:8082/dailymotion/v1/video/{id}` con el identificador de un vídeo público de un canal autorizado para tu clave. El servicio realiza el intercambio OAuth. Si la consulta termina bien, `captions` contiene las pistas devueltas por Dailymotion o queda como `[]` si la lista de pistas está vacía.
+
+### Qué devuelve el minero cuando falla el acceso
+
+| Situación | HTTP de DailyMotionMiner | Campo `code` |
+| --- | --- | --- |
+| Faltan las variables de la clave | `503` | `OAUTH_NOT_CONFIGURED` |
+| Dailymotion rechaza la solicitud del token | `502` | `OAUTH_TOKEN_REJECTED` |
+| Dailymotion responde `401` al consultar subtítulos | `502` | `CAPTIONS_UNAUTHENTICATED` |
+| Dailymotion responde `403` al consultar subtítulos | `502` | `CAPTIONS_FORBIDDEN` |
+| Dailymotion responde `429` al pedir el token o consultar subtítulos | `503` | `DAILYMOTION_RATE_LIMITED` |
+
+Cuando Dailymotion responde con un error, el JSON conserva el código HTTP del proveedor en `upstreamStatus`. Para `429`, DailyMotionMiner transmite `Retry-After` si el proveedor envía un valor válido. Si falla la consulta de subtítulos durante la importación de un canal, el minero detiene ese envío a VideoMiner.
+
+Para reproducir la comparación sin credenciales ni llamadas a Dailymotion, ejecuta `sh mvnw -Dtest=videoServiceTests test` desde `DailyMotionMiner`. Las pruebas simulan una consulta con pistas, una lista vacía, el rechazo de credenciales o del token, la falta de permisos y el límite de peticiones. La demo de VideoMiner sirve para enseñar los datos que ya están almacenados en H2.
 
 ## Documentación
 

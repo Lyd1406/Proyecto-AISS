@@ -3,6 +3,7 @@ package aiss.DailyMotionMiner.controller;
 import aiss.DailyMotionMiner.model.videominer.VMChannel;
 import aiss.DailyMotionMiner.model.videominer.VMVideo;
 import aiss.DailyMotionMiner.service.ChannelService;
+import aiss.DailyMotionMiner.service.DailymotionCaptionException;
 import aiss.DailyMotionMiner.service.VideoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,6 +13,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -72,5 +76,11 @@ public class DailymotionController {
         return channelService.getChannelAndSendToMiner(id, maxVideos, maxPages);
     }
 
-
+    @ExceptionHandler(DailymotionCaptionException.class)
+    public ResponseEntity<ProblemDetail> handleCaptionError(DailymotionCaptionException error) {
+        return ResponseEntity.status(error.getStatusCode())
+                .headers(error.getHeaders())
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .body(error.getBody());
+    }
 }
