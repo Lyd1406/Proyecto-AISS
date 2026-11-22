@@ -63,18 +63,30 @@ DailyMotionMiner consulta los metadatos públicos de un vídeo mediante la API R
 
 La referencia de Dailymotion clasifica `id`, `language` y `url` como campos de lectura pública. La autenticación estudiada aquí corresponde al acceso de servidor mediante la API de partners, que es la ruta que utiliza el minero para esa consulta. [Client Credentials en la API legacy](https://developers.dailymotion.com/v0/docs/authenticate-using-client-credentials) · [Campos de subtítulos](https://developers.dailymotion.com/v0/reference/subtitles-fields).
 
-### Configuración y prueba en directo
+### Prueba paso a paso sin Dailymotion Edge
 
-1. En Dailymotion Studio, crea una clave de API **privada** para los canales que vas a consultar y asígnale los permisos necesarios. Si la clave que se había guardado en el repositorio es real, revócala y usa una nueva. Git puede conservar los valores anteriores en su historial.
-2. Configura `DAILYMOTION_CLIENT_ID` y `DAILYMOTION_CLIENT_SECRET` como variables de entorno del proceso. Si tu clave necesita solicitar ámbitos concretos, configura también `DAILYMOTION_SCOPE` como una lista separada por espacios. En IntelliJ puedes definirlas en **Run → Edit Configurations → Environment variables**.
-3. Con JDK 21, ejecuta desde la raíz del proyecto:
+La prueba ejecuta el código de DailyMotionMiner con respuestas simuladas de Dailymotion. Solo necesitas **JDK 21** y el proyecto. Puedes dejar cerrados Postman y los tres servicios. La prueba funciona sin cuenta Edge, claves ni variables OAuth. Maven puede necesitar conexión la primera vez para descargar las dependencias.
+
+**Desde IntelliJ**
+
+1. Abre el proyecto y selecciona **JDK 21** para el módulo DailyMotionMiner.
+2. Abre [videoServiceTests.java](DailyMotionMiner/src/test/java/aiss/DailyMotionMiner/service/videoServiceTests.java).
+3. Pulsa el triángulo verde junto a `class videoServiceTests` y selecciona **Run**.
+4. En la pestaña **Run**, comprueba que las **6 pruebas** aparecen en verde.
+
+**Desde la terminal**
+
+1. Abre una terminal en la raíz del proyecto y ejecuta `java -version` para comprobar que está usando Java 21.
+2. Entra en el módulo y ejecuta las pruebas.
 
    ```sh
    cd DailyMotionMiner
-   sh mvnw spring-boot:run
+   sh mvnw -Dtest=videoServiceTests test
    ```
 
-4. En Postman, haz un `GET` a `http://localhost:8082/dailymotion/v1/video/{id}` con el identificador de un vídeo público de un canal autorizado para tu clave. El servicio realiza el intercambio OAuth. Si la consulta termina bien, `captions` contiene las pistas devueltas por Dailymotion o queda como `[]` si la lista de pistas está vacía.
+   En Windows, usa `mvnw.cmd -Dtest=videoServiceTests test` dentro de `DailyMotionMiner`.
+3. Comprueba que Maven muestra `Tests run: 6, Failures: 0, Errors: 0` y `BUILD SUCCESS`.
+
 
 ### Qué devuelve el minero cuando falla el acceso
 
@@ -88,7 +100,20 @@ La referencia de Dailymotion clasifica `id`, `language` y `url` como campos de l
 
 Cuando Dailymotion responde con un error, el JSON conserva el código HTTP del proveedor en `upstreamStatus`. Para `429`, DailyMotionMiner transmite `Retry-After` si el proveedor envía un valor válido. Si falla la consulta de subtítulos durante la importación de un canal, el minero detiene ese envío a VideoMiner.
 
-Para reproducir la comparación sin credenciales ni llamadas a Dailymotion, ejecuta `sh mvnw -Dtest=videoServiceTests test` desde `DailyMotionMiner`. Las pruebas simulan una consulta con pistas, una lista vacía, el rechazo de credenciales o del token, la falta de permisos y el límite de peticiones. La demo de VideoMiner sirve para enseñar los datos que ya están almacenados en H2.
+### Prueba en directo opcional con una clave autorizada
+
+La gestión de claves está disponible en **Dailymotion Edge**. Necesitas acceso de propietario o administrador a una organización con esa opción habilitada. [Disponibilidad por tipo de cuenta](https://faq.dailymotion.com/hc/en-us/articles/115009022528-Using-your-Dailymotion-Studio) · [Roles y permisos](https://faq.dailymotion.com/hc/en-us/articles/360025126594-User-roles-permissions).
+
+1. En Dailymotion Studio, abre **Ajustes → Cuenta → API keys**. Algunas guías muestran **Organización → API keys**. Crea una clave **privada** para los canales autorizados y asigna los permisos necesarios. Si la clave que se había guardado en el repositorio es real, revócala y usa una nueva. Git puede conservar los valores anteriores en su historial.
+2. Configura `DAILYMOTION_CLIENT_ID` y `DAILYMOTION_CLIENT_SECRET` como variables de entorno del proceso. Si tu clave necesita solicitar ámbitos concretos, configura también `DAILYMOTION_SCOPE` como una lista separada por espacios. En IntelliJ puedes definirlas en **Run → Edit Configurations → Environment variables**.
+3. Con JDK 21, ejecuta desde la raíz del proyecto:
+
+   ```sh
+   cd DailyMotionMiner
+   sh mvnw spring-boot:run
+   ```
+
+4. En Postman, haz un `GET` a `http://localhost:8082/dailymotion/v1/video/{id}` con el identificador de un vídeo público de un canal autorizado para tu clave. El servicio realiza el intercambio OAuth. Si la consulta termina bien, `captions` contiene las pistas devueltas por Dailymotion o queda como `[]` si la lista de pistas está vacía.
 
 ## Documentación
 
